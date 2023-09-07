@@ -1,0 +1,36 @@
+import 'package:bloc/bloc.dart';
+import 'package:equatable/equatable.dart';
+
+part 'pokemon_event.dart';
+part 'pokemon_state.dart';
+
+class PokemonBloc extends Bloc<PokemonEvent, PokemonState> {
+  final Future<String> Function(int id) _fetchPokemonName;
+
+  PokemonBloc({required Future<String> Function(int id) fetchPokemon})
+      : _fetchPokemonName = fetchPokemon,
+        super(const PokemonState()) {
+    on<PokemonAdded>((event, emit) {
+      final newPokemons = Map<int, String>.from(state.pokemons);
+      newPokemons[event.id] = event.name;
+      emit(state.copyWith(pokemons: newPokemons));
+    });
+  }
+
+  Future<String> fetchPokemonName(int id) async {
+    //check if pokemon is already in cache
+    if (state.pokemons.containsKey(id)) {
+      return state.pokemons[id]!;
+    }
+
+    try {
+      final response = await _fetchPokemonName(id);
+      final pokemonName = response[0].toUpperCase() + response.substring(1);
+
+      add(PokemonAdded(id, pokemonName));
+      return pokemonName;
+    } catch (e) {
+      throw Exception('Error fetching pokemon name');
+    }
+  }
+}
